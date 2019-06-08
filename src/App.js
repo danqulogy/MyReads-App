@@ -5,7 +5,9 @@ import './App.css'
 
 class BooksApp extends React.Component {
     state = {
-        books: []
+        books: [],
+        query: '',
+        searchResults: []
     }
 
     componentDidMount() {
@@ -23,12 +25,46 @@ class BooksApp extends React.Component {
     }
 
     changeBookShelf(event, book) {
+        console.log(event.target.value);
         BooksAPI.update({id: book.id}, event.target.value)
             .then(() => this.fetchBooks());
     }
 
+    updateQuery(value) {
+        let results = null;
+
+        this.setState((prevState) => ({
+            query: value.trim()
+        }));
+
+        BooksAPI.search(this.state.query)
+            .then((searchResults) => {
+                console.log(searchResults);
+                if (searchResults !== undefined && !searchResults.items) {
+                    this.updateSearchResults(searchResults);
+                }
+            });
+    }
+
+    updateSearchResults = (results) => {
+        for (let book of this.state.books) {
+            let existingBook = (results.filter((b) => b.id === book.id))[0];
+            if (existingBook){
+                console.log(existingBook);
+                let indexOfExistingBook = results.indexOf(existingBook);
+                results[indexOfExistingBook] = book;
+            }
+        }
+        this.setState((prevState) => ({
+            searchResults : results
+        }))
+
+    }
+
     render() {
-        const {books} = this.state;
+        const {books, query,searchResults} = this.state;
+
+
         return (
             <div className="app">
                 <Route exact path={'/'} render={() => (
@@ -157,20 +193,70 @@ class BooksApp extends React.Component {
                         <div className="search-books-bar">
                             <Link className="close-search" to={'/'}>Close</Link>
                             <div className="search-books-input-wrapper">
-                                {/*
-                  NOTES: The search from BooksAPI is limited to a particular set of search terms.
-                  You can find these search terms here:
-                  https://github.com/udacity/reactnd-project-myreads-starter/blob/master/SEARCH_TERMS.md
-
-                  However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
-                  you don't find a specific author or title. Every search is limited by search terms.
-                */}
-                                <input type="text" placeholder="Search by title or author"/>
-
+                                <input type="text" value={query}
+                                       onChange={(event) => this.updateQuery(event.target.value)}
+                                       placeholder="Search by title or author"/>
                             </div>
                         </div>
                         <div className="search-books-results">
-                            <ol className="books-grid"></ol>
+                            <ol className="books-grid">
+                                {query.length === 0 && books.map((book) => ((
+                                    <li key={book.id}>
+                                        <div className="book">
+                                            <div className="book-top">
+                                                {book.imageLinks && (<div className="book-cover" style={{
+                                                    width: 128,
+                                                    height: 193,
+                                                    backgroundImage: `url(${book.imageLinks.thumbnail})`
+                                                }}/>)}
+                                                <div className="book-shelf-changer">
+                                                    <select value={book.shelf}
+                                                            onChange={(event) => this.changeBookShelf(event, book)}>
+                                                        <option value="move" disabled>Move to...
+                                                        </option>
+                                                        <option value="currentlyReading">Currently
+                                                            Reading
+                                                        </option>
+                                                        <option value="wantToRead">Want to Read</option>
+                                                        <option value="read">Read</option>
+                                                        <option value="none">None</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="book-title">{book.title}</div>
+                                            <div className="book-authors">{book.authors}</div>
+                                        </div>
+                                    </li>
+                                )))}
+                                {query.length > 0 && searchResults.map((book) => ((
+                                    <li key={book.id}>
+                                        <div className="book">
+                                            <div className="book-top">
+                                                {book.imageLinks && (<div className="book-cover" style={{
+                                                    width: 128,
+                                                    height: 193,
+                                                    backgroundImage: `url(${book.imageLinks.thumbnail})`
+                                                }}/>)}
+                                                <div className="book-shelf-changer">
+                                                    <select value={book.shelf}
+                                                            onChange={(event) => this.changeBookShelf(event, book)}>
+                                                        <option value="move" disabled>Move to...
+                                                        </option>
+                                                        <option value="currentlyReading">Currently
+                                                            Reading
+                                                        </option>
+                                                        <option value="wantToRead">Want to Read</option>
+                                                        <option value="read">Read</option>
+                                                        <option value="none">None</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="book-title">{book.title}</div>
+                                            <div className="book-authors">{book.authors}</div>
+                                        </div>
+                                    </li>
+                                )))}
+                            </ol>
                         </div>
                     </div>
                 )}/>
